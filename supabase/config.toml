@@ -1,0 +1,8 @@
+# Supabase CLI project file. Only what differs from the CLI defaults is set.
+project_id = "sidi"
+
+[api]
+# The app talks to the RPCs in `public` and nothing else. The `app` (tables)
+# and `private` (internal functions) schemas are never exposed.
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
