@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/di.dart';
 import '../../../app/theme.dart';
+import '../../../core/bloc/submit_cubit.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/common.dart';
 import '../../../core/widgets/form_sheet.dart';
+import '../../catalog/presentation/catalog_cubit.dart';
+import '../../organization/presentation/org_forms.dart';
+import '../../organization/presentation/organization_cubits.dart';
 import '../domain/session.dart';
 import 'session_cubit.dart';
 
@@ -13,6 +18,37 @@ import 'session_cubit.dart';
 /// the manage section and the admin console.
 class AccountPage extends StatelessWidget {
   const AccountPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => OrgCreateCubit(sl()),
+      child: BlocListener<OrgCreateCubit, SubmitState<String>>(
+        listener: (context, state) async {
+          if (state.status == SubmitStatus.failed) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.failure!.message)));
+          } else if (state.status == SubmitStatus.done) {
+            final router = GoRouter.of(context);
+            await context.read<SessionCubit>().refresh();
+            router.push('/manage/${state.value}');
+          }
+        },
+        child: const _AccountView(),
+      ),
+    );
+  }
+}
+
+Future<void> _createOrg(BuildContext context) async {
+  final cubit = context.read<OrgCreateCubit>();
+  final catalog = context.read<CatalogCubit>().state.data;
+  if (catalog == null) return;
+  final org = await showOrgCreateForm(context, catalog);
+  if (org != null) await cubit.create(org);
+}
+
+class _AccountView extends StatelessWidget {
+  const _AccountView();
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +114,7 @@ class AccountPage extends StatelessWidget {
                     SectionHeader(
                       'My organisations',
                       trailing: TextButton.icon(
-                        onPressed: () => context.push('/org-new'),
+                        onPressed: () => _createOrg(context),
                         icon: const Icon(Icons.add, size: 18),
                         label: const Text('Create'),
                       ),
@@ -97,7 +133,7 @@ class AccountPage extends StatelessWidget {
                                 'and host tournaments. New organisations are reviewed before they go live.',
                               ),
                               Gap.md,
-                              FilledButton.tonal(onPressed: () => context.push('/org-new'), child: const Text('Create an organisation')),
+                              FilledButton.tonal(onPressed: () => _createOrg(context), child: const Text('Create an organisation')),
                             ],
                           ),
                         ),
