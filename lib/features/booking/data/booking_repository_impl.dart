@@ -40,8 +40,8 @@ Booking bookingFromJson(Json b) => Booking(
   kind: b.str('kind'),
   status: b.str('status'),
   price: b.number('price'),
-  startsAt: b.date('starts_at'),
-  endsAt: b.date('ends_at'),
+  startsAt: b.date('starts_local'),
+  endsAt: b.date('ends_local'),
   customerName: b.str('customer_name', 'Guest'),
   resourceName: b.str('resource_name'),
   sportCode: b.str('sport_code'),
@@ -49,6 +49,7 @@ Booking bookingFromJson(Json b) => Booking(
   orgName: b.str('org_name'),
   currency: b.str('currency', 'INR'),
   cancelHours: b.integer('cancel_hours'),
+  canCancel: b.flag('can_cancel'),
   notes: b.strOrNull('notes'),
   payment: paymentRefFromJson(b.objOrNull('payment')),
 );
@@ -92,8 +93,8 @@ ManagedFacility _facilityFromJson(Json f) => ManagedFacility(
         'blocks',
         (k) => ResourceBlock(
           id: k.str('id'),
-          startsAt: k.date('starts_at'),
-          endsAt: k.date('ends_at'),
+          startsAt: k.date('starts_local'),
+          endsAt: k.date('ends_local'),
           reason: k.strOrNull('reason'),
         ),
       ),
@@ -119,6 +120,8 @@ class BookingRepositoryImpl implements BookingRepository {
           (s) => Slot(
             startsAt: s.date('starts_at'),
             endsAt: s.date('ends_at'),
+            startsLocal: s.date('starts_local'),
+            endsLocal: s.date('ends_local'),
             price: s.number('price'),
             remaining: s.integer('remaining'),
             status: s.str('status'),
@@ -168,8 +171,8 @@ class BookingRepositoryImpl implements BookingRepository {
     'org_resource_block',
     params: {
       'p_resource_id': resourceId,
-      'p_from': from.toUtc().toIso8601String(),
-      'p_to': to.toUtc().toIso8601String(),
+      'p_from': isoLocal(from),
+      'p_to': isoLocal(to),
       'p_reason': reason,
     },
   );
@@ -197,7 +200,7 @@ class BookingRepositoryImpl implements BookingRepository {
     'org_booking_create',
     params: {
       'p_resource_id': resourceId,
-      'p_starts_at': startsAt.toUtc().toIso8601String(),
+      'p_starts_at': isoLocal(startsAt),
       'p_slots': slots,
       'p_customer_name': customerName,
       'p_handle': handle,

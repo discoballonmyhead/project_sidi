@@ -35,6 +35,8 @@ abstract interface class TournamentRepository {
   Future<Result<void>> scoreMatch(String matchId, Json score, {required bool isFinal});
   Future<Result<void>> walkover(String matchId, String winnerSide);
   Future<Result<void>> reopenMatch(String matchId);
+
+  /// [startsAt] is wall-clock time at the venue, here and in [autoSchedule].
   Future<Result<void>> scheduleMatch(String matchId, {String? resourceId, DateTime? startsAt, int minutes = 60});
   Future<Result<int>> autoSchedule(
     String stageId, {

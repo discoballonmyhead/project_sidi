@@ -67,7 +67,7 @@ class FieldSpec {
 
 /// Opens a bottom sheet with the given fields and returns the entered values,
 /// or null when dismissed. Text is trimmed and blank becomes null; dates are
-/// `yyyy-MM-dd`; date-times are ISO-8601 in UTC.
+/// `yyyy-MM-dd`; date-times are wall-clock `yyyy-MM-ddTHH:mm:ss` (see [isoLocal]).
 Future<Json?> showFormSheet(
   BuildContext context, {
   required String title,
@@ -138,7 +138,7 @@ class _FormSheetState extends State<_FormSheet> {
         FieldKind.integer => text.isEmpty ? null : int.tryParse(text),
         FieldKind.multiChoice => (_values[field.key]! as Set<String>).toList(),
         FieldKind.date => _values[field.key] == null ? null : isoDay(_values[field.key]! as DateTime),
-        FieldKind.dateTime => (_values[field.key] as DateTime?)?.toUtc().toIso8601String(),
+        FieldKind.dateTime => _values[field.key] == null ? null : isoLocal(_values[field.key]! as DateTime),
         FieldKind.choice || FieldKind.toggle => _values[field.key],
       };
     }

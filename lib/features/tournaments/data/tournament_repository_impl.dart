@@ -21,7 +21,8 @@ TournamentCard tournamentFromJson(Json t) => TournamentCard(
   facilityName: t.strOrNull('facility_name'),
   startsOn: t.dayOrNull('starts_on') ?? DateTime.now(),
   endsOn: t.dayOrNull('ends_on') ?? DateTime.now(),
-  registrationClosesAt: t.dateOrNull('registration_closes_at'),
+  registrationClosesAt: t.dateOrNull('registration_closes_local'),
+  registrationOpen: t.flag('registration_open'),
   status: t.str('status'),
   rules: t.strOrNull('rules'),
   orgName: t.str('org_name'),
@@ -94,7 +95,7 @@ MatchItem matchFromJson(Json m) => MatchItem(
   sideBSeed: m.intOrNull('side_b_seed'),
   sideAPlaceholder: m.strOrNull('side_a_placeholder'),
   sideBPlaceholder: m.strOrNull('side_b_placeholder'),
-  scheduledAt: m.dateOrNull('scheduled_at'),
+  scheduledAt: m.dateOrNull('scheduled_local'),
   resourceId: m.strOrNull('resource_id'),
   resourceName: m.strOrNull('resource_name'),
   groupName: m.strOrNull('group_name'),
@@ -320,7 +321,7 @@ class TournamentRepositoryImpl implements TournamentRepository {
         params: {
           'p_match_id': matchId,
           'p_resource_id': resourceId,
-          'p_starts_at': startsAt?.toUtc().toIso8601String(),
+          'p_starts_at': startsAt == null ? null : isoLocal(startsAt),
           'p_minutes': minutes,
         },
       );
@@ -337,7 +338,7 @@ class TournamentRepositoryImpl implements TournamentRepository {
     params: {
       'p_stage_id': stageId,
       'p_resource_ids': resourceIds,
-      'p_starts_at': startsAt.toUtc().toIso8601String(),
+      'p_starts_at': isoLocal(startsAt),
       'p_match_minutes': matchMinutes,
       'p_gap_minutes': gapMinutes,
     },

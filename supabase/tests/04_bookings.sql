@@ -46,8 +46,9 @@ select t.eq((select count(*) from jsonb_array_elements(
 
 -- Maintenance blocks close slots.
 select t.login('desk@sidi.test');
+-- Organisations type venue wall-clock times: 10:00 to 12:00 tomorrow.
 select public.org_resource_block(current_setting('test.court')::uuid,
-  current_setting('test.t7')::timestamptz + interval '3 hours', current_setting('test.t7')::timestamptz + interval '5 hours', 'Floor polish');
+  (current_date + 1) + time '10:00', (current_date + 1) + time '12:00', 'Floor polish');
 select t.login('p2@sidi.test');
 select t.throws(format('select public.booking_create(%L, %L)', current_setting('test.court'),
   (current_setting('test.t7')::timestamptz + interval '3 hours')::text), 'slot_blocked');
@@ -55,6 +56,9 @@ select t.throws(format('select public.booking_create(%L, %L)', current_setting('
 -- Customers cancel their own bookings, inside the venue's window only.
 select t.login('p1@sidi.test');
 select t.eq(jsonb_array_length(public.my_bookings()), 2, 'two upcoming bookings');
+select t.eq(public.my_bookings() #>> '{0,starts_local}', to_char((current_date + 1) + time '07:00', 'YYYY-MM-DD"T"HH24:MI:SS'),
+  'bookings are reported in venue wall-clock time');
+select t.ok((public.my_bookings() #>> '{0,can_cancel}')::boolean, 'the server says whether a booking can still be cancelled');
 select t.throws(format('select public.booking_cancel(%L)', public.my_bookings() #>> '{0,id}'), 'booking_not_found', 'not p2''s booking')
 from (select t.login('p2@sidi.test')) x;
 select t.login('p1@sidi.test');
@@ -77,7 +81,10 @@ select public.org_payment_settle((public.org_payments(current_setting('test.org'
 select t.eq((public.org_overview(current_setting('test.org')::uuid) #>> '{stats,month_income}')::numeric, 0::numeric, 'refund removes the income');
 
 -- Walk-ins at the desk; a gym floor takes several people per slot.
-select public.org_booking_create(current_setting('test.court')::uuid, current_setting('test.t7')::timestamptz + interval '6 hours', 1, 'Walk-in Ravi', null, 350);
+select public.org_booking_create(current_setting('test.court')::uuid, (current_date + 1) + time '13:00', 1, 'Walk-in Ravi', null, 350);
+select t.eq((select b ->> 'starts_local' from jsonb_array_elements(public.org_bookings(current_setting('test.org')::uuid, current_date + 1, current_date + 1)) b
+             where b ->> 'kind' = 'walk_in'), to_char((current_date + 1) + time '13:00', 'YYYY-MM-DD"T"HH24:MI:SS'),
+  'a walk-in at 13:00 venue time reads back as 13:00');
 select set_config('test.gym', public.org_resource_save(current_setting('test.org')::uuid, jsonb_build_object(
   'facility_id', current_setting('test.fac'), 'sport_code', 'gym', 'kind', 'gym_floor', 'name', 'Gym floor',
   'capacity', 2, 'price', 150)) ->> 'id', false);

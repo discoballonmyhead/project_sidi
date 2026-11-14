@@ -174,7 +174,7 @@ class _BookingViewState extends State<_BookingView> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              Fmt.timeRange(picked.first.startsAt, picked.last.endsAt),
+                              Fmt.timeRange(picked.first.startsLocal, picked.last.endsLocal),
                               style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                             ),
                             Text(
@@ -283,7 +283,7 @@ class _SlotChip extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(Fmt.time(slot.startsAt), style: TextStyle(fontWeight: FontWeight.w700, color: foreground)),
+              Text(Fmt.time(slot.startsLocal), style: TextStyle(fontWeight: FontWeight.w700, color: foreground)),
               Text(
                 switch (slot.status) {
                   'full' => shared ? 'Full' : 'Booked',

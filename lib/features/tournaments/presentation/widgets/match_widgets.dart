@@ -104,7 +104,7 @@ class BracketView extends StatelessWidget {
   final List<MatchItem> matches;
   final void Function(MatchItem match)? onTap;
 
-  static const _cardHeight = 74.0;
+  static const _cardHeight = 86.0;
   static const _cardWidth = 210.0;
   static const _gap = 14.0;
 

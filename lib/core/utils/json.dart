@@ -72,6 +72,12 @@ List<T> parseList<T>(dynamic json, T Function(Json item) parse) {
 
 Json asJson(dynamic json) => json is Map ? Map<String, dynamic>.from(json) : const {};
 
+/// `2026-11-14T18:30:00`: a wall-clock time with no zone. Times an
+/// organisation enters (walk-ins, match schedules, closures, deadlines) are
+/// times at its venue, and the backend applies the venue's time zone.
+String isoLocal(DateTime time) =>
+    '${isoDay(time)}T${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}:00';
+
 /// `2026-11-14`, the format the backend expects for calendar dates.
 String isoDay(DateTime day) =>
     '${day.year.toString().padLeft(4, '0')}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';

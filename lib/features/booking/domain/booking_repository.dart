@@ -9,7 +9,8 @@ abstract interface class BookingRepository {
   Future<Result<void>> cancel(String bookingId, {String? reason});
   Future<Result<List<Booking>>> myBookings({required bool upcoming});
 
-  // Organisation: facilities
+  // Organisation. Times passed below are wall-clock times at the venue.
+  // Facilities
   Future<Result<List<ManagedFacility>>> facilities(String orgId);
   Future<Result<void>> saveFacility(String orgId, Json facility);
   Future<Result<void>> saveResource(String orgId, Json resource);

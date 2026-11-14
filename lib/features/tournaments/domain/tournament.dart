@@ -15,6 +15,7 @@ class TournamentCard {
     required this.startsOn,
     required this.endsOn,
     this.registrationClosesAt,
+    required this.registrationOpen,
     required this.status,
     this.rules,
     required this.orgName,
@@ -35,7 +36,11 @@ class TournamentCard {
   final String? facilityName;
   final DateTime startsOn;
   final DateTime endsOn;
+  /// Entry deadline, as wall-clock time at the venue.
   final DateTime? registrationClosesAt;
+
+  /// Whether entries are being taken right now (decided by the backend).
+  final bool registrationOpen;
 
   /// `draft`, `open`, `closed`, `live`, `completed` or `cancelled`.
   final String status;
@@ -48,8 +53,6 @@ class TournamentCard {
   final double? minEntryFee;
 
   String get place => venue ?? facilityName ?? orgName;
-  bool get registrationOpen =>
-      status == 'open' && (registrationClosesAt == null || registrationClosesAt!.isAfter(DateTime.now()));
 }
 
 class Stage {
@@ -295,6 +298,8 @@ class MatchItem {
   final int? sideBSeed;
   final String? sideAPlaceholder;
   final String? sideBPlaceholder;
+
+  /// Wall-clock time at the venue.
   final DateTime? scheduledAt;
   final String? resourceId;
   final String? resourceName;

@@ -225,6 +225,8 @@ create view app.v_tournaments as
 select t.id, t.org_id, t.sport_code, t.name, t.description, t.venue, t.facility_id,
        t.starts_on, t.ends_on, t.registration_closes_at, t.status, t.banner_url, t.rules,
        t.created_at,
+       t.registration_closes_at at time zone o.timezone as registration_closes_local,
+       (t.status = 'open' and (t.registration_closes_at is null or t.registration_closes_at > now())) as registration_open,
        o.name as org_name, o.is_verified as org_is_verified, o.logo_url as org_logo_url,
        o.currency, o.city as org_city,
        f.name as facility_name,
@@ -260,10 +262,13 @@ select m.id, m.event_id, m.stage_id, m.group_id, m.seq, m.bracket, m.round_no, m
             then initcap(m.a_source_outcome) || ' of ' || sa.label end as side_a_placeholder,
        case when m.side_b is null and m.b_source_match is not null
             then initcap(m.b_source_outcome) || ' of ' || sb.label end as side_b_placeholder,
-       m.scheduled_at, m.resource_id, r.name as resource_name, m.completed_at,
+       m.scheduled_at, m.scheduled_at at time zone o.timezone as scheduled_local,
+       m.resource_id, r.name as resource_name, m.completed_at,
        g.name as group_name, s.name as stage_name, s.seq as stage_seq, s.format_key
 from app.matches m
 join app.event_stages s on s.id = m.stage_id
+join app.tournament_events te on te.id = m.event_id
+join app.organizations o on o.id = te.org_id
 left join app.entrants a on a.id = m.side_a
 left join app.entrants b on b.id = m.side_b
 left join app.matches sa on sa.id = m.a_source_match

@@ -29,7 +29,9 @@ begin
                           from app.resource_hours h where h.resource_id = r.id), '[]'::jsonb),
                         'blocks', coalesce((
                           select jsonb_agg(jsonb_build_object(
-                                   'id', k.id, 'starts_at', lower(k.during), 'ends_at', upper(k.during), 'reason', k.reason)
+                                   'id', k.id, 'reason', k.reason,
+                                   'starts_local', lower(k.during) at time zone r.timezone,
+                                   'ends_local', upper(k.during) at time zone r.timezone)
                                  order by lower(k.during))
                           from app.resource_blocks k
                           where k.resource_id = r.id and upper(k.during) > now()), '[]'::jsonb))
@@ -142,17 +144,26 @@ exception
     return null;
 end $$;
 
-create function public.org_resource_block(p_resource_id uuid, p_from timestamptz, p_to timestamptz, p_reason text default null)
+-- Times an organisation types in are wall-clock times at the venue; they are
+-- turned into instants here with the organisation's time zone.
+create function private.venue_time(p_org_id uuid, p_local timestamp)
+returns timestamptz language sql stable set search_path = '' as $$
+  select p_local at time zone o.timezone from app.organizations o where o.id = p_org_id;
+$$;
+
+create function public.org_resource_block(p_resource_id uuid, p_from timestamp, p_to timestamp, p_reason text default null)
 returns void language plpgsql security definer set search_path = '' as $$
-declare v_uid uuid;
+declare
+  v_org uuid := (select org_id from app.resources where id = p_resource_id);
+  v_uid uuid;
 begin
-  v_uid := private.require_org((select org_id from app.resources where id = p_resource_id),
-                               array['owner', 'manager', 'staff']);
+  v_uid := private.require_org(v_org, array['owner', 'manager', 'staff']);
   if p_from is null or p_to is null or p_to <= p_from then
     perform private.fail(422, 'invalid_range', 'The block must end after it starts.');
   end if;
   insert into app.resource_blocks (resource_id, during, reason, created_by)
-  values (p_resource_id, tstzrange(p_from, p_to), private.clean(p_reason), v_uid);
+  values (p_resource_id, tstzrange(private.venue_time(v_org, p_from), private.venue_time(v_org, p_to)),
+          private.clean(p_reason), v_uid);
 end $$;
 
 create function public.org_resource_unblock(p_block_id uuid)
@@ -190,7 +201,8 @@ begin
     'discount_pct', private.member_discount(v_res.org_id, v_uid),
     'slots', coalesce((
       select jsonb_agg(jsonb_build_object(
-               'starts_at', s.starts_at, 'ends_at', s.ends_at, 'price', s.price,
+               'starts_at', s.starts_at, 'ends_at', s.ends_at,
+               'starts_local', s.starts_local, 'ends_local', s.ends_local, 'price', s.price,
                'remaining', greatest(s.capacity - s.booked, 0),
                'status', case
                  when s.blocked then 'blocked'
@@ -339,7 +351,10 @@ end $$;
 
 create function private.booking_json(p_row app.v_bookings)
 returns jsonb language sql stable set search_path = '' as $$
-  select to_jsonb(p_row) || jsonb_build_object('payment', (
+  select to_jsonb(p_row) || jsonb_build_object(
+    'can_cancel', p_row.status in ('pending', 'confirmed')
+                  and p_row.starts_at - make_interval(hours => p_row.cancel_hours) > now(),
+    'payment', (
     select jsonb_build_object('id', p.id, 'status', p.status, 'amount', p.amount, 'method', p.method)
     from app.payments p
     where p.purpose = 'booking' and p.ref_id = p_row.id
@@ -377,22 +392,22 @@ end $$;
 
 -- Walk-in or phone booking taken at the desk, optionally for a registered user.
 create function public.org_booking_create(
-  p_resource_id uuid, p_starts_at timestamptz, p_slots int, p_customer_name text,
+  p_resource_id uuid, p_starts_at timestamp, p_slots int, p_customer_name text,
   p_handle text default null, p_price numeric default null, p_notes text default null)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
+  v_org  uuid := (select org_id from app.resources where id = p_resource_id);
   v_uid  uuid;
   v_user uuid := private.find_user(p_handle);
   v_id   uuid;
 begin
-  v_uid := private.require_org((select org_id from app.resources where id = p_resource_id),
-                               array['owner', 'manager', 'staff']);
+  v_uid := private.require_org(v_org, array['owner', 'manager', 'staff']);
   if v_user is null and private.clean(p_customer_name) is null then
     perform private.fail(422, 'invalid_booking', 'Enter the customer''s name.');
   end if;
   perform 1 from app.resources where id = p_resource_id for update;
-  v_id := private.booking_place(p_resource_id, p_starts_at, p_slots, v_user, p_customer_name,
-                                'walk_in', p_notes, p_price, v_uid);
+  v_id := private.booking_place(p_resource_id, private.venue_time(v_org, p_starts_at), p_slots, v_user,
+                                p_customer_name, 'walk_in', p_notes, p_price, v_uid);
   return jsonb_build_object('id', v_id);
 end $$;
 

@@ -23,7 +23,7 @@ class AvailabilityCubit extends AsyncCubit<Availability> {
 
   Future<bool> book(Slot slot, {required int slots, String? notes}) => act(
     () => _repository.book(resourceId, slot.startsAt, slots: slots, notes: notes),
-    success: 'Booked for ${Fmt.dayTime(slot.startsAt)}.',
+    success: 'Booked for ${Fmt.dayTime(slot.startsLocal)}.',
   );
 }
 

@@ -270,7 +270,9 @@ select set_config('test.court', public.org_resource_save(current_setting('test.o
   'facility_id', public.org_facility_save(current_setting('test.org')::uuid, '{"name": "Arena"}') ->> 'id',
   'sport_code', 'badminton', 'name', 'Show court', 'price', 500)) ->> 'id', false);
 select t.eq(public.org_stage_auto_schedule((public.event_detail(current_setting('test.e')::uuid) #>> '{stages,0,id}')::uuid,
-  array[current_setting('test.court')::uuid], ((current_date + 20) + time '10:00') at time zone 'Asia/Kolkata', 45, 5), 1, 'one match scheduled');
+  array[current_setting('test.court')::uuid], (current_date + 20) + time '10:00', 45, 5), 1, 'one match scheduled');
+select t.eq(public.event_detail(current_setting('test.e')::uuid) #>> '{stages,0,matches,0,scheduled_local}',
+  to_char((current_date + 20) + time '10:00', 'YYYY-MM-DD"T"HH24:MI:SS'), '10:00 at the venue');
 select t.eq(public.event_detail(current_setting('test.e')::uuid) #>> '{stages,0,matches,0,resource_name}', 'Show court', 'on the show court');
 select t.login('fan@sidi.test');
 select t.throws(format('select public.booking_create(%L, %L)', current_setting('test.court'),

@@ -40,10 +40,23 @@ class Resource {
 }
 
 class Slot {
-  const Slot({required this.startsAt, required this.endsAt, required this.price, required this.remaining, required this.status});
+  const Slot({
+    required this.startsAt,
+    required this.endsAt,
+    required this.startsLocal,
+    required this.endsLocal,
+    required this.price,
+    required this.remaining,
+    required this.status,
+  });
 
+  /// The instant the slot starts; this is what a booking is made for.
   final DateTime startsAt;
   final DateTime endsAt;
+
+  /// The same moments as wall-clock time at the venue; this is what is shown.
+  final DateTime startsLocal;
+  final DateTime endsLocal;
   final double price;
   final int remaining;
 
@@ -87,6 +100,7 @@ class Booking {
     required this.orgName,
     required this.currency,
     required this.cancelHours,
+    required this.canCancel,
     this.notes,
     this.payment,
   });
@@ -97,6 +111,8 @@ class Booking {
   final String kind;
   final String status;
   final double price;
+
+  /// Wall-clock time at the venue.
   final DateTime startsAt;
   final DateTime endsAt;
   final String customerName;
@@ -106,11 +122,14 @@ class Booking {
   final String orgName;
   final String currency;
   final int cancelHours;
+
+  /// Whether the customer is still inside the venue's cancellation window.
+  /// Decided by the backend, which knows the real time at the venue.
+  final bool canCancel;
   final String? notes;
   final PaymentRef? payment;
 
   bool get isOpen => status == 'pending' || status == 'confirmed';
-  bool get canCancel => isOpen && startsAt.subtract(Duration(hours: cancelHours)).isAfter(DateTime.now());
 }
 
 class OpeningHours {

@@ -35,6 +35,9 @@ import 'home_shell.dart';
 /// Routes, and the one rule that guards them: who you are decides where you
 /// may be. Authorisation proper lives in the backend; this only keeps people
 /// out of screens that would show them nothing but errors.
+///
+/// Pages that take an id are keyed by it: without the key, opening a second
+/// tournament over the first would keep the first one's cubit and data.
 GoRouter buildRouter(SessionCubit session) {
   String currencyOf(BuildContext context, String orgId) =>
       context.read<SessionCubit>().state.me?.organizations.where((o) => o.id == orgId).firstOrNull?.currency ?? 'INR';
@@ -66,15 +69,15 @@ GoRouter buildRouter(SessionCubit session) {
       ),
       GoRoute(path: '/notifications', builder: (_, _) => const NotificationsPage()),
       GoRoute(path: '/entries', builder: (_, _) => const MyEntriesPage()),
-      GoRoute(path: '/org/:orgId', builder: (_, state) => OrgProfilePage(orgId: state.pathParameters['orgId']!)),
-      GoRoute(path: '/book/:resourceId', builder: (_, state) => BookResourcePage(resourceId: state.pathParameters['resourceId']!)),
-      GoRoute(path: '/journey/:membershipId', builder: (_, state) => JourneyPage(membershipId: state.pathParameters['membershipId']!)),
-      GoRoute(path: '/tournament/:id', builder: (_, state) => TournamentPage(tournamentId: state.pathParameters['id']!)),
-      GoRoute(path: '/event/:id', builder: (_, state) => EventPage(eventId: state.pathParameters['id']!)),
+      GoRoute(path: '/org/:orgId', builder: (_, state) => OrgProfilePage(key: ValueKey(state.pathParameters['orgId']), orgId: state.pathParameters['orgId']!)),
+      GoRoute(path: '/book/:resourceId', builder: (_, state) => BookResourcePage(key: ValueKey(state.pathParameters['resourceId']), resourceId: state.pathParameters['resourceId']!)),
+      GoRoute(path: '/journey/:membershipId', builder: (_, state) => JourneyPage(key: ValueKey(state.pathParameters['membershipId']), membershipId: state.pathParameters['membershipId']!)),
+      GoRoute(path: '/tournament/:id', builder: (_, state) => TournamentPage(key: ValueKey(state.pathParameters['id']), tournamentId: state.pathParameters['id']!)),
+      GoRoute(path: '/event/:id', builder: (_, state) => EventPage(key: ValueKey(state.pathParameters['id']), eventId: state.pathParameters['id']!)),
       GoRoute(path: '/admin', builder: (_, _) => const AdminPage()),
       GoRoute(
         path: '/manage/:orgId',
-        builder: (_, state) => ManageHomePage(orgId: state.pathParameters['orgId']!),
+        builder: (_, state) => ManageHomePage(key: ValueKey(state.pathParameters['orgId']), orgId: state.pathParameters['orgId']!),
         routes: [
           GoRoute(path: 'desk', builder: (_, state) => DeskPage(orgId: state.pathParameters['orgId']!)),
           GoRoute(path: 'payments', builder: (_, state) => PaymentsPage(orgId: state.pathParameters['orgId']!)),
@@ -90,7 +93,7 @@ GoRouter buildRouter(SessionCubit session) {
             routes: [
               GoRoute(
                 path: ':membershipId',
-                builder: (_, state) => JourneyPage(membershipId: state.pathParameters['membershipId']!, coachView: true),
+                builder: (_, state) => JourneyPage(key: ValueKey(state.pathParameters['membershipId']), membershipId: state.pathParameters['membershipId']!, coachView: true),
               ),
             ],
           ),
@@ -106,7 +109,7 @@ GoRouter buildRouter(SessionCubit session) {
             path: 'payroll',
             builder: (context, state) =>
                 PayrollPage(orgId: state.pathParameters['orgId']!, currency: currencyOf(context, state.pathParameters['orgId']!)),
-            routes: [GoRoute(path: ':runId', builder: (_, state) => PayrollRunPage(runId: state.pathParameters['runId']!))],
+            routes: [GoRoute(path: ':runId', builder: (_, state) => PayrollRunPage(key: ValueKey(state.pathParameters['runId']), runId: state.pathParameters['runId']!))],
           ),
           GoRoute(path: 'budget', builder: (_, state) => BudgetPage(orgId: state.pathParameters['orgId']!)),
         ],

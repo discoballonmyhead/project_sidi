@@ -30,7 +30,7 @@ const _eventJson = {
           'status': 'completed', 'score': {'innings': []}, 'winner_id': 'a', 'side_a': 'a', 'side_b': 'b',
           'side_a_name': 'Hawks', 'side_b_name': 'Kings', 'side_a_seed': 1, 'side_b_seed': 2,
           'result': {'complete': true, 'outcome': 'win', 'winner': 'a', 'summary': '200/4 (20) v 100/10 (15)', 'margin': 'by 100 runs'},
-          'scheduled_at': '2026-11-20T04:30:00+00:00', 'resource_name': 'Pitch 1',
+          'scheduled_local': '2026-11-20T10:00:00', 'resource_name': 'Pitch 1',
         },
         {
           'id': 'm2', 'stage_id': 's1', 'seq': 2, 'bracket': 'main', 'round_no': 2, 'match_no': 1, 'label': 'Final',
@@ -67,7 +67,7 @@ void main() {
     expect(match.wonBy('a'), isTrue);
     expect(match.wonBy('b'), isFalse);
     expect(match.result?.margin, 'by 100 runs');
-    expect(match.scheduledAt?.toUtc(), DateTime.utc(2026, 11, 20, 4, 30));
+    expect(match.scheduledAt, DateTime(2026, 11, 20, 10), reason: 'venue wall-clock time, whatever the device zone');
   });
 
   test('a match waiting on earlier results names where its sides come from', () {

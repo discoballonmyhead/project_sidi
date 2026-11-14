@@ -103,6 +103,10 @@ join app.organizations o on o.id = r.org_id;
 create view app.v_bookings as
 select b.id, b.org_id, b.resource_id, b.user_id, b.kind, b.status, b.price, b.notes,
        lower(b.during) as starts_at, upper(b.during) as ends_at,
+       -- Wall-clock time at the venue: what a booking is shown as, wherever
+       -- the device looking at it happens to be.
+       lower(b.during) at time zone r.timezone as starts_local,
+       upper(b.during) at time zone r.timezone as ends_local,
        b.cancel_reason, b.cancelled_at, b.created_at,
        coalesce(p.display_name, b.customer_name, 'Guest') as customer_name,
        r.name as resource_name, r.sport_code, r.kind as resource_kind,
@@ -114,10 +118,13 @@ left join app.profiles p on p.id = b.user_id;
 
 -- Bookable slots of one resource on one local calendar day.
 create function private.resource_slots(p_resource_id uuid, p_date date)
-returns table (starts_at timestamptz, ends_at timestamptz, price numeric, booked int, capacity int, blocked boolean)
+returns table (starts_at timestamptz, ends_at timestamptz, starts_local timestamp, ends_local timestamp,
+               price numeric, booked int, capacity int, blocked boolean)
 language sql stable set search_path = '' as $$
   select s.starts_at,
          s.starts_at + make_interval(mins => r.slot_minutes) as ends_at,
+         s.starts_local,
+         s.starts_local + make_interval(mins => r.slot_minutes) as ends_local,
          coalesce(h.price, r.price) as price,
          (select count(*)::int from app.bookings b
           where b.resource_id = r.id
@@ -130,7 +137,7 @@ language sql stable set search_path = '' as $$
   from app.v_resources r
   join app.resource_hours h on h.resource_id = r.id and h.weekday = extract(dow from p_date)::int
   cross join lateral (
-    select (g at time zone r.timezone) as starts_at
+    select (g at time zone r.timezone) as starts_at, g as starts_local
     from generate_series(
       p_date + h.opens,
       p_date + h.closes - make_interval(mins => r.slot_minutes),

@@ -318,7 +318,7 @@ begin
             (p_tournament ->> 'facility_id')::uuid,
             (p_tournament ->> 'starts_on')::date,
             coalesce((p_tournament ->> 'ends_on')::date, (p_tournament ->> 'starts_on')::date),
-            (p_tournament ->> 'registration_closes_at')::timestamptz,
+            private.venue_time(p_org_id, (p_tournament ->> 'registration_closes_at')::timestamp),
             private.clean(p_tournament ->> 'banner_url'), private.clean(p_tournament ->> 'rules'), v_uid)
     returning id into v_id;
   else
@@ -330,7 +330,7 @@ begin
         starts_on = coalesce((p_tournament ->> 'starts_on')::date, starts_on),
         ends_on = coalesce((p_tournament ->> 'ends_on')::date, ends_on),
         registration_closes_at = case when p_tournament ? 'registration_closes_at'
-                                      then (p_tournament ->> 'registration_closes_at')::timestamptz
+                                      then private.venue_time(p_org_id, (p_tournament ->> 'registration_closes_at')::timestamp)
                                       else registration_closes_at end,
         banner_url = case when p_tournament ? 'banner_url' then private.clean(p_tournament ->> 'banner_url') else banner_url end,
         rules = case when p_tournament ? 'rules' then private.clean(p_tournament ->> 'rules') else rules end
@@ -623,13 +623,15 @@ begin
 end $$;
 
 -- Puts a match on a court at a time (and blocks the court for customers).
--- A null resource clears the schedule.
+-- The time is wall-clock time at the venue. A null resource keeps only the
+-- time; a null time clears the schedule.
 create function public.org_match_schedule(
-  p_match_id uuid, p_resource_id uuid, p_starts_at timestamptz, p_minutes int default 60)
+  p_match_id uuid, p_resource_id uuid, p_starts_at timestamp, p_minutes int default 60)
 returns void language plpgsql security definer set search_path = '' as $$
 declare
   v_e       app.tournament_events := private.require_match(p_match_id);
   v_m       app.matches;
+  v_at      timestamptz := private.venue_time(v_e.org_id, p_starts_at);
   v_booking uuid;
 begin
   select * into v_m from app.matches where id = p_match_id for update;
@@ -640,7 +642,7 @@ begin
   delete from app.bookings where id = v_m.booking_id;
 
   if p_resource_id is null then
-    update app.matches set scheduled_at = p_starts_at where id = p_match_id;
+    update app.matches set scheduled_at = v_at where id = p_match_id;
     return;
   end if;
   if not exists (select 1 from app.resources where id = p_resource_id and org_id = v_e.org_id) then
@@ -649,17 +651,17 @@ begin
   if p_starts_at is null or coalesce(p_minutes, 0) not between 5 and 720 then
     perform private.fail(422, 'invalid_schedule', 'Pick a start time and a length between 5 minutes and 12 hours.');
   end if;
-  v_booking := private.booking_place(p_resource_id, p_starts_at, 1, null,
+  v_booking := private.booking_place(p_resource_id, v_at, 1, null,
     v_e.name || ' · ' || v_m.label, 'tournament', null, 0, auth.uid(), p_minutes);
   update app.matches
-  set booking_id = v_booking, resource_id = p_resource_id, scheduled_at = p_starts_at
+  set booking_id = v_booking, resource_id = p_resource_id, scheduled_at = v_at
   where id = p_match_id;
 end $$;
 
 -- Lays the unscheduled matches of a stage across courts, round by round, so
 -- no side is asked to play two matches at once. Busy courts are skipped.
 create function public.org_stage_auto_schedule(
-  p_stage_id uuid, p_resource_ids uuid[], p_starts_at timestamptz,
+  p_stage_id uuid, p_resource_ids uuid[], p_starts_at timestamp,
   p_match_minutes int default 45, p_gap_minutes int default 5)
 returns int language plpgsql security definer set search_path = '' as $$
 declare
@@ -681,7 +683,7 @@ begin
   if (select count(*) from app.resources where id = any (p_resource_ids) and org_id = v_e.org_id) <> v_n then
     perform private.fail(404, 'resource_not_found', 'Every court must belong to this organisation.');
   end if;
-  v_cursors := array_fill(p_starts_at, array[v_n]);
+  v_cursors := array_fill(private.venue_time(v_e.org_id, p_starts_at), array[v_n]);
 
   for v_m in
     with recursive depth as (
