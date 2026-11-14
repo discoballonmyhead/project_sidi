@@ -124,8 +124,9 @@ begin
 end $$;
 
 -- Plays every playable match of an event through the public API until none is
--- left. The better seed wins, so outcomes are predictable. Returns the count.
-create function t.play_out(p_event_id uuid) returns int language plpgsql security definer as $$
+-- left. The better seed wins, so outcomes are predictable; p_upset makes the
+-- losers-bracket champion win the first grand final. Returns the count.
+create function t.play_out(p_event_id uuid, p_upset boolean default false) returns int language plpgsql security definer as $$
 declare
   v_m record;
   v_ruleset text;
@@ -133,7 +134,8 @@ declare
 begin
   select ruleset_key into v_ruleset from app.tournament_events where id = p_event_id;
   loop
-    select m.id, a.seed as seed_a, b.seed as seed_b into v_m
+    select m.id, a.seed as seed_a, b.seed as seed_b,
+           (p_upset and m.bracket = 'grand_final' and m.round_no = 1) as upset into v_m
     from app.matches m
     join app.stage_entrants a on a.stage_id = m.stage_id and a.entrant_id = m.side_a
     join app.stage_entrants b on b.stage_id = m.stage_id and b.entrant_id = m.side_b
@@ -142,7 +144,8 @@ begin
     limit 1;
     exit when not found;
     perform public.org_match_score(v_m.id,
-      t.winning_score(v_ruleset, case when v_m.seed_a < v_m.seed_b then 'a' else 'b' end), true);
+      t.winning_score(v_ruleset, case when v_m.upset then 'b'
+                                      when v_m.seed_a < v_m.seed_b then 'a' else 'b' end), true);
     v_count := v_count + 1;
     if v_count > 2000 then raise exception 'play_out did not terminate'; end if;
   end loop;
