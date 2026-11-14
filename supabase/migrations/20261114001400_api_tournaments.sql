@@ -136,7 +136,7 @@ begin
   return jsonb_build_object(
     'event', jsonb_build_object(
       'id', v_e.id, 'tournament_id', v_e.tournament_id, 'tournament_name', v_t.name,
-      'sport_code', v_t.sport_code, 'name', v_e.name, 'entrant_kind', v_e.entrant_kind,
+      'org_id', v_e.org_id, 'sport_code', v_t.sport_code, 'name', v_e.name, 'entrant_kind', v_e.entrant_kind,
       'category', v_e.category, 'entry_fee', v_e.entry_fee, 'max_entrants', v_e.max_entrants,
       'status', v_e.status, 'template_key', v_e.template_key,
       'currency', (select currency from app.organizations where id = v_e.org_id)),

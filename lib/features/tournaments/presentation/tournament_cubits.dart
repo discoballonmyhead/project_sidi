@@ -125,14 +125,11 @@ typedef EventView = ({EventDetail detail, List<Entrant> field, List<Resource> co
 /// One event: stages, tables, draws and results. For hosts it also carries
 /// the full entry list and the courts, and exposes the engine controls.
 class EventCubit extends AsyncCubit<EventView> {
-  EventCubit(this._repository, this._bookings, this.eventId, {required this.orgIdOf});
+  EventCubit(this._repository, this._bookings, this.eventId);
 
   final TournamentRepository _repository;
   final BookingRepository _bookings;
   final String eventId;
-
-  /// Resolves the hosting organisation from the tournament id, when known.
-  final String? Function(String tournamentId) orgIdOf;
 
   @override
   Future<Result<EventView>> fetch() async {
@@ -144,9 +141,8 @@ class EventCubit extends AsyncCubit<EventView> {
     final field = await _repository.entrants(eventId);
     if (field case Err(:final failure)) return Err(failure);
     var courts = state.data?.courts ?? const <Resource>[];
-    final orgId = orgIdOf(event.tournamentId);
-    if (courts.isEmpty && orgId != null) {
-      final facilities = await _bookings.facilities(orgId);
+    if (courts.isEmpty) {
+      final facilities = await _bookings.facilities(event.orgId);
       courts = [
         for (final facility in facilities.valueOrNull ?? const <ManagedFacility>[])
           for (final managed in facility.resources)

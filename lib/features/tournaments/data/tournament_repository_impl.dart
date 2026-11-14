@@ -143,6 +143,7 @@ EventDetail eventDetailFromJson(dynamic json) {
     id: event.str('id'),
     tournamentId: event.str('tournament_id'),
     tournamentName: event.str('tournament_name'),
+    orgId: event.str('org_id'),
     sportCode: event.str('sport_code'),
     name: event.str('name'),
     entrantKind: event.str('entrant_kind', 'player'),

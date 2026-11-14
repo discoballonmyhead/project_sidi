@@ -323,6 +323,7 @@ class EventDetail {
     required this.id,
     required this.tournamentId,
     required this.tournamentName,
+    required this.orgId,
     required this.sportCode,
     required this.name,
     required this.entrantKind,
@@ -339,6 +340,7 @@ class EventDetail {
   final String id;
   final String tournamentId;
   final String tournamentName;
+  final String orgId;
   final String sportCode;
   final String name;
   final String entrantKind;
