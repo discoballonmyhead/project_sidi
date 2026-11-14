@@ -1,11 +1,11 @@
 {
-    "name": "sidi",
-    "short_name": "sidi",
+    "name": "Sidi",
+    "short_name": "Sidi",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Sports centre bookings, coaching and tournaments.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -241,9 +241,9 @@ class _Verdict extends StatelessWidget {
   }
 }
 
-/// A compact number input. Tapping it selects what is there, so typing a
-/// score replaces the placeholder zero instead of adding to it.
-class _Num extends StatefulWidget {
+/// A compact number input. Zero is shown as a hint rather than as text, so
+/// the first digit typed is the score instead of something appended to "0".
+class _Num extends StatelessWidget {
   const _Num({super.key, required this.value, required this.onChanged, this.label, this.width = 76, this.decimal = false});
   final num? value;
   final ValueChanged<String> onChanged;
@@ -252,52 +252,26 @@ class _Num extends StatefulWidget {
   final bool decimal;
 
   @override
-  State<_Num> createState() => _NumState();
-}
-
-class _NumState extends State<_Num> {
-  late final _controller = TextEditingController(text: _text(widget.value));
-  late final _focus = FocusNode()..addListener(_onFocusChanged);
-  bool _focused = false;
-
-  static String _text(num? value) => value == null ? '' : (value == value.roundToDouble() ? value.toInt().toString() : value.toString());
-
-  /// Selects everything once, when focus arrives. Doing it again later (on a
-  /// tap callback, say) would swallow digits typed in the meantime.
-  void _onFocusChanged() {
-    if (_focus.hasFocus && !_focused) {
-      _controller.selection = TextSelection(baseOffset: 0, extentOffset: _controller.text.length);
-    }
-    _focused = _focus.hasFocus;
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _focus.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final value = this.value;
+    const style = TextStyle(fontSize: 18, fontWeight: FontWeight.w700);
     return SizedBox(
-      width: widget.width,
-      child: TextField(
-        controller: _controller,
-        focusNode: _focus,
+      width: width,
+      child: TextFormField(
+        initialValue: value == null || value == 0 ? '' : (value == value.roundToDouble() ? value.toInt().toString() : value.toString()),
         textAlign: TextAlign.center,
-        keyboardType: TextInputType.numberWithOptions(decimal: widget.decimal),
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(widget.decimal ? r'[0-9.]' : r'[0-9]')),
-          LengthLimitingTextInputFormatter(5),
-        ],
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        keyboardType: TextInputType.numberWithOptions(decimal: decimal),
+        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(decimal ? r'[0-9.]' : r'[0-9]')), LengthLimitingTextInputFormatter(5)],
+        style: style,
         decoration: InputDecoration(
-          labelText: widget.label,
+          labelText: label,
+          floatingLabelBehavior: FloatingLabelBehavior.always,
+          hintText: '0',
+          hintStyle: style.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35)),
           isDense: true,
           contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
         ),
-        onChanged: widget.onChanged,
+        onChanged: onChanged,
       ),
     );
   }

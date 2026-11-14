@@ -320,7 +320,8 @@ class _EventCard extends StatelessWidget {
                     spacing: 14,
                     runSpacing: 4,
                     children: [
-                      for (final place in event.podium.take(3))
+                      // Rank 3 can be shared when no third-place match was played.
+                      for (final place in event.podium.where((p) => p.rank <= 3))
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [

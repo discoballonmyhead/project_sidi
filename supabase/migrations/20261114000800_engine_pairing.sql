@@ -617,6 +617,9 @@ $$;
 -- Bracket stages: the later a side played its last match the better, and a
 -- win there beats a loss. Works for single and double elimination and the
 -- page playoff, because each bracket is weighted by when it is played.
+-- `final_rank` is a strict order (seeding the next stage needs one);
+-- `group_rank` is the placing, shared by sides no match separated, so the
+-- two losing semi-finalists are both third unless a third-place match is played.
 create function private.rank_bracket(p_stage_id uuid)
 returns void language sql set search_path = '' as $$
   with played as (
@@ -636,10 +639,11 @@ returns void language sql set search_path = '' as $$
     from played order by entrant_id, weight desc
   )
   update app.stage_entrants se
-  set final_rank = q.rank, group_rank = q.rank
+  set final_rank = q.rank, group_rank = q.place
   from (
     select s.entrant_id,
-           row_number() over (order by l.weight desc nulls last, l.won desc nulls last, s.seed)::int as rank
+           row_number() over (order by l.weight desc nulls last, l.won desc nulls last, s.seed)::int as rank,
+           rank() over (order by l.weight desc nulls last, l.won desc nulls last)::int as place
     from app.stage_entrants s
     left join last_match l on l.entrant_id = s.entrant_id
     where s.stage_id = p_stage_id
@@ -764,9 +768,10 @@ begin
     return;
   end if;
 
-  -- Last stage: its ranking is the event's final placing.
+  -- Last stage: its ranking is the event's final placing. A bracket reports
+  -- shared placings (joint third), a table a strict order.
   update app.entrants e
-  set final_rank = se.final_rank
+  set final_rank = case when v_rank_fn = 'rank_bracket' then se.group_rank else se.final_rank end
   from app.stage_entrants se
   where se.stage_id = p_stage_id and se.entrant_id = e.id;
   update app.tournament_events set status = 'completed' where id = v_stage.event_id;

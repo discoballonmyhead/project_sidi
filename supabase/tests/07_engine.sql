@@ -129,6 +129,8 @@ select t.eq(t.q(format($$select least(a.seed, b.seed) || 'v' || greatest(a.seed,
   where m.event_id = %L and m.round_no = 1 and m.match_no = 2$$, current_setting('test.e'))) ->> 'pairing', '2v4', 'B1 meets A2');
 select t.eq(array[t.rank_of(current_setting('test.e')::uuid, 1), t.rank_of(current_setting('test.e')::uuid, 2)], array[1, 2], 'final placings');
 select t.ok(t.rank_of(current_setting('test.e')::uuid, 8) is null, 'sides knocked out in the groups have no final placing');
+select t.eq(array[t.rank_of(current_setting('test.e')::uuid, 3), t.rank_of(current_setting('test.e')::uuid, 4)], array[3, 3],
+  'without a third-place match the losing semi-finalists share third');
 
 -- ---------------------------------------------------------------------------
 -- Three stages: ICC T20 World Cup (4 groups -> Super 8 -> knockout), 12 teams
